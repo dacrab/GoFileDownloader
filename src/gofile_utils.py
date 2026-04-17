@@ -1,11 +1,15 @@
+import os
 import sys
 from hashlib import sha256
+from pathlib import Path
 from time import time
 from urllib.parse import urlencode
 
 import httpx
 
 from .config import GOFILE_API, GOFILE_API_ACCOUNTS
+
+TOKEN_CACHE = Path.home() / ".cache" / "gofile_token"
 
 
 def get_content_id(url: str) -> str | None:
@@ -29,13 +33,44 @@ def generate_website_token(account_token: str) -> str:
 
 
 def get_account_token() -> str:
-    headers = {"User-Agent": "Mozilla/5.0", "Accept": "*/*", "Connection": "keep-alive"}
+    # Check environment variable first
+    if env_token := os.getenv("GOFILE_TOKEN"):
+        return env_token
+
+    # Try cached token first
+    if TOKEN_CACHE.exists():
+        cached = TOKEN_CACHE.read_text().strip()
+        if cached:
+            return cached
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Encoding": "gzip",
+        "Accept": "*/*",
+        "Connection": "keep-alive",
+    }
     try:
         with httpx.Client(timeout=30.0) as client:
-            account_response = client.post(GOFILE_API_ACCOUNTS, headers=headers).json()
-        if account_response["status"] != "ok":
+            response = client.post(GOFILE_API_ACCOUNTS, headers=headers)
+            account_response = response.json()
+
+        if account_response["status"] == "error-rateLimit":
+            print("Error: GoFile API rate limit reached. Try again later.")
             sys.exit(1)
-        return str(account_response["data"]["token"])
+
+        if account_response["status"] != "ok":
+            print(
+                f"Error: Failed to create account - {account_response.get('status', 'unknown')}"
+            )
+            sys.exit(1)
+
+        token = str(account_response["data"]["token"])
+
+        # Cache the token
+        TOKEN_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        TOKEN_CACHE.write_text(token)
+
+        return token
     except (httpx.TimeoutException, httpx.RequestError) as e:
-        print(f"Failed to get account token: {e}")
+        print(f"Error: Network request failed - {e}")
         sys.exit(1)

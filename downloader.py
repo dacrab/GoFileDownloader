@@ -73,14 +73,19 @@ class Downloader:
         headers["Authorization"] = f"Bearer {self.token}"
         headers["X-Website-Token"] = generate_website_token(self.token)
 
-        with httpx.Client(timeout=10.0) as client:
-            response = client.get(
-                generate_content_url(identifier, password), headers=headers
-            )
-            data = response.json()
+        try:
+            with httpx.Client(timeout=30.0) as client:
+                response = client.get(
+                    generate_content_url(identifier, password), headers=headers
+                )
+                data = response.json()
+        except Exception as e:
+            self.ui.log("Error", f"Request failed: {str(e)[:50]}")
+            return
 
         if data["status"] != "ok":
-            self.ui.log("Failed", f"Invalid response for {identifier}")
+            error_msg = str(data.get("data", "Unknown error"))[:50]
+            self.ui.log("Failed", f"{identifier}: {error_msg}")
             return
 
         content = data["data"]
