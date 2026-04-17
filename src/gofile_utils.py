@@ -1,4 +1,3 @@
-import logging
 import sys
 from hashlib import sha256
 from time import time
@@ -6,17 +5,15 @@ from urllib.parse import urlencode
 
 import httpx
 
-from .config import GOFILE_API, GOFILE_API_ACCOUNTS, HTTP_STATUS_OK
+from .config import GOFILE_API, GOFILE_API_ACCOUNTS
 
 
 def get_content_id(url: str) -> str | None:
     try:
         if url.rstrip("/").split("/")[-2] != "d":
-            logging.error(f"Missing ID for URL: {url}")
             return None
         return url.rstrip("/").split("/")[-1]
     except IndexError:
-        logging.exception(f"{url} is not a valid GoFile URL.")
         return None
 
 
@@ -31,28 +28,10 @@ def generate_website_token(account_token: str) -> str:
     return sha256(token_seed.encode()).hexdigest()
 
 
-def check_response_status(response: httpx.Response, filename: str) -> bool:
-    if response.status_code != HTTP_STATUS_OK:
-        logging.error(
-            f"Invalid response for {filename}. Status code: {response.status_code}"
-        )
-        return False
-    return True
-
-
 def get_account_token() -> str:
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Accept-Encoding": "gzip",
-        "Accept": "*/*",
-        "Connection": "keep-alive",
-    }
-
+    headers = {"User-Agent": "Mozilla/5.0", "Accept": "*/*", "Connection": "keep-alive"}
     with httpx.Client(timeout=15.0) as client:
         account_response = client.post(GOFILE_API_ACCOUNTS, headers=headers).json()
-
     if account_response["status"] != "ok":
-        logging.error("Account creation failed.")
         sys.exit(1)
-
-    return account_response["data"]["token"]
+    return str(account_response["data"]["token"])

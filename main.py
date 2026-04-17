@@ -1,35 +1,36 @@
 import os
 import sys
+from pathlib import Path
 
 from downloader import Downloader
 from src.config import URLS_FILE, parse_arguments
-from src.file_utils import read_file, write_file
-from src.managers.live_manager import LiveManager, LoggerTable, ProgressManager
+from src.ui import UI
 
 
 def main() -> None:
     os.system("cls" if os.name == "nt" else "clear")
-
     args = parse_arguments(common_only=True)
-    urls = [url.strip() for url in read_file(URLS_FILE) if url.strip()]
 
+    urls_path = Path(URLS_FILE)
+    if not urls_path.exists():
+        print("No URLs.txt found")
+        return
+
+    urls = [url.strip() for url in urls_path.read_text().splitlines() if url.strip()]
     if not urls:
         print("No URLs found in URLs.txt")
         return
 
-    progress_manager = ProgressManager(task_name="Album", item_description="File")
-    logger_table = LoggerTable()
-    live_manager = LiveManager(progress_manager, logger_table)
-
+    ui = UI()
     try:
-        with live_manager.live:
+        with ui.live:
             for url in urls:
-                Downloader(url, live_manager, args).initialize_download()
-            live_manager.stop()
+                Downloader(url, ui, args).initialize_download()
+            ui.stop()
     except KeyboardInterrupt:
         sys.exit(1)
 
-    write_file(URLS_FILE)
+    urls_path.write_text("")
 
 
 if __name__ == "__main__":
