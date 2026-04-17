@@ -30,8 +30,12 @@ def generate_website_token(account_token: str) -> str:
 
 def get_account_token() -> str:
     headers = {"User-Agent": "Mozilla/5.0", "Accept": "*/*", "Connection": "keep-alive"}
-    with httpx.Client(timeout=15.0) as client:
-        account_response = client.post(GOFILE_API_ACCOUNTS, headers=headers).json()
-    if account_response["status"] != "ok":
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            account_response = client.post(GOFILE_API_ACCOUNTS, headers=headers).json()
+        if account_response["status"] != "ok":
+            sys.exit(1)
+        return str(account_response["data"]["token"])
+    except (httpx.TimeoutException, httpx.RequestError) as e:
+        print(f"Failed to get account token: {e}")
         sys.exit(1)
-    return str(account_response["data"]["token"])

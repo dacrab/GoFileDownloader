@@ -23,13 +23,13 @@ class Downloader:
         self.url = url
         self.ui = ui
         self.password = args.password if args and hasattr(args, "password") else None
-        self.token = get_account_token()
         self.download_path = (
             Path(args.custom_path)
             if args and args.custom_path
             else Path.cwd() / DOWNLOAD_FOLDER
         )
         self.download_path.mkdir(parents=True, exist_ok=True)
+        self.token = get_account_token()
 
     async def download_item(
         self, client: httpx.AsyncClient, current_task: int, file_info: dict[str, str]
