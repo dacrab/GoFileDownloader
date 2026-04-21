@@ -1,15 +1,17 @@
+# Python
 __pycache__/
 *.py[cod]
 *.so
-*.egg-info/
-.Python
-build/
-dist/
-*.egg
+
+# Virtual environments
 .venv/
 venv/
 env/
+
+# IDE
+.vscode/
+.idea/
+
+# Project specific
 Downloads/
 URLs.txt
-.mypy_cache/
-.ruff_cache/

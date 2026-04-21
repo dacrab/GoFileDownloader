@@ -1,37 +1,32 @@
-import os
-import sys
+#!/usr/bin/env python3
+"""Batch downloader for multiple GoFile URLs."""
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from downloader import Downloader
-from src.config import URLS_FILE, parse_arguments
-from src.ui import UI
+from rich.live import Live
+from rich.progress import (
+    Progress, SpinnerColumn, BarColumn, DownloadColumn, TransferSpeedColumn
+)
 
+from downloader import get_token, parse_files, download_file
 
-def main() -> None:
-    os.system("cls" if os.name == "nt" else "clear")
-    args = parse_arguments(common_only=True)
+urls = Path("URLs.txt").read_text(encoding="utf-8").strip().split("\n")
+token = get_token()
+progress = Progress(
+    SpinnerColumn(),
+    *Progress.get_default_columns(),
+    BarColumn(),
+    DownloadColumn(),
+    TransferSpeedColumn()
+)
 
-    urls_path = Path(URLS_FILE)
-    if not urls_path.exists():
-        print("No URLs.txt found")
-        return
-
-    urls = [url.strip() for url in urls_path.read_text().splitlines() if url.strip()]
-    if not urls:
-        print("No URLs found in URLs.txt")
-        return
-
-    ui = UI()
-    try:
-        with ui.live:
-            for url in urls:
-                Downloader(url, ui, args).initialize_download()
-            ui.stop()
-    except KeyboardInterrupt:
-        sys.exit(1)
-
-    urls_path.write_text("")
-
-
-if __name__ == "__main__":
-    main()
+with Live(progress):
+    for url in urls:
+        content_id = url.split("/")[-1]
+        files = parse_files(content_id, token, base_path=Path("Downloads"))
+        tasks = [
+            (f, u, token, progress, progress.add_task(f.name, total=0))
+            for f, u in files
+        ]
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            executor.map(download_file, tasks)

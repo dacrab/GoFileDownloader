@@ -1,2 +1,2 @@
-httpx>=0.28.1
-rich>=15.0.0
+requests
+rich
