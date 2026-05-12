@@ -84,7 +84,8 @@ def _download(path, url, token, progress, task):
         progress.update(task, visible=False)
         return
     try:
-        with requests.get(url, headers={"Cookie": f"accountToken={token}"}, stream=True, timeout=30) as r:
+        hdrs = {"Cookie": f"accountToken={token}"}
+        with requests.get(url, headers=hdrs, stream=True, timeout=30) as r:
             r.raise_for_status()
             total = int(r.headers.get("content-length", 0))
             progress.update(task, total=total)
@@ -111,6 +112,7 @@ def _run_downloads(files, token):
 
 
 def main():
+    """CLI entry point."""
     parser = ArgumentParser(description="GoFile Downloader")
     parser.add_argument("url", nargs="?", help="GoFile URL")
     parser.add_argument("password", nargs="?", help="Folder password")
